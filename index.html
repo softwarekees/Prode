@@ -8462,6 +8462,143 @@ Adjunto comprobante.`);
 })();
 </script>
 
+
+
+<!-- V76 · Pago manual por WhatsApp + activación admin en Supabase -->
+<style id="v76-whatsapp-manual-payment-css">
+.v76-modal-backdrop{position:fixed;inset:0;background:rgba(2,8,23,.72);z-index:99999;display:none;align-items:center;justify-content:center;padding:18px}.v76-modal-backdrop.open{display:flex}.v76-modal{width:min(980px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;box-shadow:0 25px 80px rgba(0,0,0,.35);border:1px solid #dbe7f4}.v76-head{background:linear-gradient(120deg,#08205d,#0872df);color:white;padding:26px 28px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.v76-head h2{margin:0;font-size:34px;line-height:1}.v76-head p{margin:8px 0 0;font-weight:900;color:#dbeafe}.v76-close{border:0;background:rgba(255,255,255,.14);color:white;width:54px;height:54px;border-radius:16px;font-size:34px;font-weight:1000;cursor:pointer}.v76-body{padding:22px}.v76-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}.v76-tabs button{border:1px solid #d4e2f3;background:#fff;color:#075fc8;border-radius:14px;padding:12px 18px;font-weight:1000;cursor:pointer}.v76-tabs button.active{background:#0872df;color:#fff;border-color:#0872df}.v76-pane{display:none}.v76-pane.active{display:block}.v76-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.v76-card{border:1px solid #dbe7f4;border-radius:18px;padding:18px;background:#fff}.v76-card h3{margin:0 0 12px;font-size:24px}.v76-form{display:grid;gap:12px}.v76-form input,.v76-form select{height:48px;border-radius:14px;border:1px solid #d4e2f3;padding:0 14px;font-weight:900;font-size:16px}.v76-btn{height:52px;border:0;border-radius:14px;background:#0872df;color:#fff;font-weight:1000;font-size:16px;cursor:pointer}.v76-btn.green{background:#22c55e}.v76-btn.dark{background:#0f172a}.v76-pay-options{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}.v76-pay-card{border:2px solid #dbe7f4;border-radius:18px;padding:18px;background:#fff}.v76-pay-card h4{margin:0 0 6px;font-size:24px}.v76-pay-card p{margin:0 0 10px;color:#64748b;font-weight:900}.v76-status{margin-top:14px;border-radius:14px;padding:12px 14px;font-weight:1000;background:#eef6ff;color:#075985;display:none}.v76-status.show{display:block}.v76-status.ok{background:#dcfce7;color:#166534}.v76-status.bad{background:#fee2e2;color:#991b1b}.v76-small{color:#64748b;font-weight:900;line-height:1.45}.v76-list{margin:0;padding-left:18px;color:#64748b;font-weight:900;line-height:1.6}.v76-pill{display:inline-flex;align-items:center;height:42px;padding:0 14px;border-radius:14px;border:1px solid #d4e2f3;background:#f8fbff;color:#075fc8;font-weight:1000}.v76-admin-box{margin-top:12px;padding:14px;border-radius:14px;background:#f8fafc;border:1px dashed #cbd5e1;color:#475569;font-weight:900}.v76-admin-box code{background:#e2e8f0;border-radius:8px;padding:2px 6px}.v76-muted{color:#64748b;font-weight:900}.v76-whatsapp-float{position:fixed;right:22px;bottom:22px;z-index:9999;width:66px;height:66px;border-radius:50%;background:#22c55e;color:white;display:grid;place-items:center;text-decoration:none;font-size:34px;border:6px solid white;box-shadow:0 14px 35px rgba(34,197,94,.38)}
+@media(max-width:760px){.v76-modal{border-radius:18px}.v76-head{padding:20px}.v76-head h2{font-size:27px}.v76-body{padding:16px}.v76-grid,.v76-pay-options{grid-template-columns:1fr}.v76-tabs button{flex:1}.v76-whatsapp-float{right:14px;bottom:14px;width:58px;height:58px}}
+</style>
+<script id="v76-whatsapp-manual-payment-js">
+(function(){
+  'use strict';
+  const PROJECT_REF='vkxwxtjwjfrwygqjcvmg';
+  const SUPABASE_URL='https://vkxwxtjwjfrwygqjcvmg.supabase.co';
+  const MANUAL_FUNCTION_URL=SUPABASE_URL+'/functions/v1/manual-register';
+  const WHATSAPP_PHONE='5492926405465';
+  const LS='prode_accounts_v76_manual';
+
+  function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function norm(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_\-.]/g,'');}
+  function readLS(k,d){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d));}catch(e){return d;}}
+  function writeLS(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+  function accounts(){return readLS(LS,[]);}
+  function saveAccounts(a){writeLS(LS,a); try{window.state=window.state||{}; state.accounts=a; if(typeof save==='function')save();}catch(e){}}
+  function sessionName(){return localStorage.getItem('prode_current_user_v76')||'';}
+  function setSession(username){localStorage.setItem('prode_current_user_v76',username); try{window.state=window.state||{}; state.user=username; state.currentUsername=username; if(typeof save==='function')save();}catch(e){} updateHeader();}
+  function current(){const u=sessionName(); return accounts().find(a=>a.username===u)||null;}
+  function isPaid(a){const s=String(a?.estado_pago||a?.paymentStatus||'').toLowerCase(); return !!(window.state&&state.adminMode) || ['aprobado','activo','paid','approved','completed'].includes(s);}
+  window.currentAccountV44=current; window.currentAccountV56=current; window.accountPaidV56=isPaid;
+  window.paid=function(){return isPaid(current());};
+
+  function ensureModal(){let m=document.getElementById('v76AuthModal'); if(!m){m=document.createElement('div');m.id='v76AuthModal';m.className='v76-modal-backdrop';document.body.appendChild(m);} return m;}
+  function msg(text,type){const el=document.getElementById('v76Status'); if(!el)return; el.className='v76-status show '+(type||''); el.textContent=text;}
+
+  async function callManualFunction(payload){
+    const res=await fetch(MANUAL_FUNCTION_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error||data.message||'No se pudo conectar con el registro.');
+    return data;
+  }
+  async function registerPendingSupabase(acc, paymentType){
+    try{
+      const out=await callManualFunction({
+        action:'register',
+        username:acc.username,
+        moneda:acc.moneda,
+        monto:acc.moneda==='USD'?7:7000,
+        metodo_pago: paymentType || 'whatsapp_manual',
+        estado_pago:'pendiente',
+        created_at:new Date().toISOString()
+      });
+      return out;
+    }catch(e){
+      console.warn('Registro pendiente Supabase:',e);
+      return {ok:false, local:true, error:String(e.message||e)};
+    }
+  }
+  async function refreshStatus(){
+    const a=current(); if(!a){msg('Primero creá una cuenta o iniciá sesión.','bad'); return;}
+    try{
+      msg('Consultando estado de pago...','');
+      const out=await callManualFunction({action:'status',username:a.username});
+      if(out && out.estado_pago){
+        a.estado_pago=out.estado_pago; a.paymentStatus=out.estado_pago; a.metodo_pago=out.metodo_pago||a.metodo_pago; a.updated_at=new Date().toISOString();
+        const all=accounts().map(x=>x.username===a.username?a:x); saveAccounts(all); setSession(a.username);
+        if(isPaid(a)){msg('Pago aprobado. Tu cuenta ya está activa.','ok'); setTimeout(()=>{closeAuthModal(); try{renderHome();}catch(e){}},900);} else {msg('Tu pago sigue pendiente de aprobación.','');}
+      }else msg('Tu pago sigue pendiente de aprobación.','');
+    }catch(e){msg('No se pudo consultar el estado. Si ya pagaste, esperá la aprobación del administrador.','bad');}
+  }
+
+  function whatsappUrl(kind){
+    const a=current();
+    const currency=kind==='usd'?'USD':'ARS';
+    const amount=currency==='USD'?'US$7':'$7.000 ARS';
+    const payText=currency==='USD'
+      ? 'Quiero completar el pago en dólares. Puedo pagar por PayPal USD o transferencia.'
+      : 'Quiero completar el pago en pesos argentinos. Puedo pagar con tarjetas o transferencia.';
+    const text=`Hola, quiero activar mi cuenta de Prode Latinoamérica 2026.\nUsuario: ${a?.username||''}\nPlan: ${amount}\n${payText}\nCuando confirme el pago, por favor activame la cuenta.`;
+    return 'https://wa.me/'+WHATSAPP_PHONE+'?text='+encodeURIComponent(text);
+  }
+  async function openWhatsappPayment(kind){
+    const a=current();
+    if(!a){openAuthModal('register'); return;}
+    a.moneda=kind==='usd'?'USD':'ARS'; a.estado_pago=a.estado_pago||'pendiente'; a.paymentStatus=a.paymentStatus||'pendiente';
+    const all=accounts().map(x=>x.username===a.username?a:x); saveAccounts(all);
+    msg('Guardando solicitud de pago pendiente...', '');
+    const out=await registerPendingSupabase(a, kind==='usd'?'whatsapp_usd':'whatsapp_ars');
+    if(out.ok===false && out.local) msg('Se abre WhatsApp. Después revisá que hayas deployado la función manual-register.', '');
+    else msg('Solicitud registrada. Se abre WhatsApp para completar el pago.', 'ok');
+    setTimeout(()=>window.open(whatsappUrl(kind),'_blank','noopener,noreferrer'),350);
+  }
+  window.openWhatsappPaymentV76=openWhatsappPayment;
+  window.refreshManualPaymentStatusV76=refreshStatus;
+
+  window.registerAccountV56=async function(){
+    const username=norm(document.getElementById('v76RegUser')?.value || document.getElementById('v74RegUser')?.value || document.getElementById('regUserInput')?.value);
+    const pass=String(document.getElementById('v76RegPass')?.value || document.getElementById('v74RegPass')?.value || document.getElementById('regPassInput')?.value || '').trim();
+    const moneda=document.getElementById('v76RegCurrency')?.value || 'ARS';
+    if(!username || !pass){msg('Completá usuario y contraseña.','bad'); return;}
+    const all=accounts();
+    if(all.some(a=>a.username===username)){msg('Ya existe el usuario. Iniciá sesión.','bad'); return;}
+    const acc={username,password:pass,moneda,estado_pago:'pendiente',paymentStatus:'pendiente',metodo_pago:'whatsapp_manual',created_at:new Date().toISOString()};
+    all.push(acc); saveAccounts(all); setSession(username);
+    await registerPendingSupabase(acc,'registro_pendiente');
+    openAuthModal('payment');
+    msg('Usuario creado. Completá el pago por WhatsApp para que el administrador lo active.','ok');
+  };
+  window.loginWithUserV56=function(){
+    const username=norm(document.getElementById('v76LoginUser')?.value || document.getElementById('v74LoginUser')?.value || document.getElementById('loginUserInput')?.value);
+    const pass=String(document.getElementById('v76LoginPass')?.value || document.getElementById('v74LoginPass')?.value || document.getElementById('loginPassInput')?.value || '').trim();
+    if(!username || !pass){msg('Completá usuario y contraseña.','bad'); return;}
+    const acc=accounts().find(a=>a.username===username);
+    if(!acc){msg('El usuario no existe. Creá una cuenta.','bad'); return;}
+    if(String(acc.password)!==pass){msg('Contraseña incorrecta.','bad'); return;}
+    setSession(username); openAuthModal(isPaid(acc)?'login':'payment'); msg(isPaid(acc)?'Sesión iniciada.':'Sesión iniciada. Tu pago sigue pendiente de aprobación.', isPaid(acc)?'ok':'');
+    refreshStatus();
+  };
+  window.logoutV44=function(){localStorage.removeItem('prode_current_user_v76'); try{state.user=''; state.currentUsername=''; if(typeof save==='function')save();}catch(e){} updateHeader(); try{renderHome();}catch(e){}};
+
+  function modalHTML(){
+    const a=current(); const paid=isPaid(a);
+    return `<div class="v76-modal"><div class="v76-head"><div><h2>Cuenta Prode Latinoamérica</h2><p>Creá tu usuario y completá el pago por WhatsApp. El administrador activa la cuenta cuando confirma el pago.</p></div><button class="v76-close" type="button" onclick="closeAuthModal()">×</button></div><div class="v76-body"><div class="v76-tabs"><button type="button" id="v76TabLogin" onclick="setAuthTab('login')">Iniciar sesión</button><button type="button" id="v76TabRegister" onclick="setAuthTab('register')">Crear cuenta</button><button type="button" id="v76TabPayment" onclick="setAuthTab('payment')">Pago por WhatsApp</button></div>
+    <div id="v76PaneLogin" class="v76-pane"><div class="v76-grid"><div class="v76-card"><h3>Entrar</h3><div class="v76-form"><input id="v76LoginUser" autocomplete="username" placeholder="Nombre de usuario"><input id="v76LoginPass" autocomplete="current-password" type="password" placeholder="Contraseña"><button type="button" class="v76-btn" onclick="loginWithUserV56()">Iniciar sesión</button></div></div><div class="v76-card"><h3>No tengo cuenta</h3><p class="v76-small">Cualquier persona puede crear su usuario. La cuenta queda pendiente hasta que el administrador confirme el pago.</p><button type="button" class="v76-btn" onclick="setAuthTab('register')">Crear cuenta</button></div></div></div>
+    <div id="v76PaneRegister" class="v76-pane"><div class="v76-grid"><div class="v76-card"><h3>Crear cuenta</h3><div class="v76-form"><input id="v76RegUser" autocomplete="username" placeholder="Nombre de usuario"><input id="v76RegPass" autocomplete="new-password" type="password" placeholder="Contraseña"><select id="v76RegCurrency"><option value="ARS">Argentina · $7.000 ARS</option><option value="USD">Exterior · US$7</option></select><button type="button" class="v76-btn" onclick="registerAccountV56()">Crear usuario</button></div></div><div class="v76-card"><h3>Estado inicial</h3><p class="v76-small">El usuario se guarda como pendiente. Cuando vos confirmás el pago, lo activás desde Supabase.</p></div></div></div>
+    <div id="v76PanePayment" class="v76-pane"><div class="v76-card"><h3>Completar el pago por WhatsApp</h3>${a?`<p><b>Usuario:</b> ${esc(a.username)}</p><p><b>Estado:</b> ${paid?'Aprobado':'Pendiente de aprobación'}</p>`:'<p>Primero registrate o iniciá sesión.</p>'}<div class="v76-pay-options"><div class="v76-pay-card"><h4>Argentina</h4><p>$7.000 ARS</p><ul class="v76-list"><li>Se puede pagar con todas las tarjetas.</li><li>También por transferencia.</li></ul><button type="button" class="v76-btn green" onclick="openWhatsappPaymentV76('ars')">Completar pago por WhatsApp</button></div><div class="v76-pay-card"><h4>Exterior</h4><p>US$7</p><ul class="v76-list"><li>Se puede pagar por PayPal en USD.</li><li>También por transferencia.</li></ul><button type="button" class="v76-btn green" onclick="openWhatsappPaymentV76('usd')">Completar pago por WhatsApp</button></div></div><div class="v76-admin-box">Tu cuenta queda pendiente hasta que el administrador confirme el pago.</div><button type="button" class="v76-btn dark" style="margin-top:12px" onclick="refreshManualPaymentStatusV76()">Actualizar estado</button></div></div><div id="v76Status" class="v76-status"></div></div></div>`;
+  }
+  window.openAuthModal=function(tab='login'){const m=ensureModal();m.innerHTML=modalHTML();m.classList.add('open');setAuthTab(tab);};
+  window.closeAuthModal=function(){ensureModal().classList.remove('open');updateHeader();};
+  window.setAuthTab=function(tab='login'){['login','register','payment'].forEach(t=>{document.getElementById('v76Pane'+t[0].toUpperCase()+t.slice(1))?.classList.toggle('active',t===tab);document.getElementById('v76Tab'+t[0].toUpperCase()+t.slice(1))?.classList.toggle('active',t===tab);});};
+  function updateHeader(){const login=document.querySelector('.login');if(!login)return;const a=current();if(a){login.innerHTML=`<span class="v76-pill">👤 ${esc(a.username)}</span>${isPaid(a)?'':`<button type="button" onclick="openAuthModal('payment')">Completar pago</button>`}<button type="button" class="save" onclick="logoutV44()">Salir</button>`;}else{login.innerHTML=`<input id="username" placeholder="Nombre de usuario"><button type="button" onclick="openAuthModal('login')">Iniciar sesión</button><button type="button" class="save" onclick="openAuthModal('register')">Crear cuenta</button>`;}}
+  window.updateHeaderAuthV44=updateHeader; window.updateHeaderAuthV56=updateHeader;
+  window.payMercadoPagoV56=function(){openWhatsappPayment('ars');};
+  window.payPaypalV56=function(){openWhatsappPayment('usd');};
+  window.payWhatsappV56=function(){openWhatsappPayment((current()?.moneda||'ARS')==='USD'?'usd':'ars');};
+  function addFloat(){if(document.querySelector('.v76-whatsapp-float'))return; const a=document.createElement('a'); a.className='v76-whatsapp-float'; a.href='https://wa.me/'+WHATSAPP_PHONE+'?text='+encodeURIComponent('Hola, quiero consultar por Prode Latinoamérica 2026.'); a.target='_blank'; a.rel='noopener'; a.textContent='☘'; a.title='WhatsApp'; document.body.appendChild(a);}
+  setTimeout(()=>{updateHeader(); addFloat(); try{go('inicio');}catch(e){}},250);
+})();
+</script>
+
 </body></html>
 <style id="v59-limpiar-explicaciones-patch">
 /* V59 · Limpieza de textos explicativos para que el video explique el funcionamiento */
